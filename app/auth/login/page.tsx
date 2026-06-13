@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck, Mail, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,10 +12,24 @@ import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const errParam = searchParams.get('error')
+    if (errParam === 'confirmation_failed') {
+      setError('Email confirmation failed. The link may have expired. Please try registering again.')
+    } else if (errParam === 'oauth_failed') {
+      setError('Sign in failed. Please try again.')
+    }
+    if (searchParams.get('confirmed') === '1') {
+      setInfo('Email confirmed! You can now sign in.')
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,6 +66,11 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
+            {info && (
+              <div className="p-3 rounded bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+                {info}
+              </div>
+            )}
             {error && (
               <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
                 {error}

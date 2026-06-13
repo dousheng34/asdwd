@@ -25,11 +25,15 @@ export default function RegisterPage() {
     setError(null)
 
     const supabase = createClient()
+    // emailRedirectTo tells Supabase where to send the confirmation link.
+    // The callback route will exchange the token and redirect to /profile.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { username },
+        emailRedirectTo: `${siteUrl}/auth/callback?next=/profile`,
       },
     })
 
