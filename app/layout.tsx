@@ -1,44 +1,52 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/navbar";
 
-const inter = Inter({ subsets: ['latin'] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-/**
- * Root layout for the arbitration system
- * Sets up metadata, fonts, and global styling
- */
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: 'Game Exchange Arbitration System',
-  description: 'Independent dispute resolution for game item trades',
-  keywords: ['arbitration', 'dispute resolution', 'game trading', 'escrow'],
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://arbitration-system.vercel.app',
-    siteName: 'Game Exchange Arbitration',
-    title: 'Game Exchange Arbitration System',
-    description: 'Independent dispute resolution for game item trades',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Game Exchange Arbitration System',
-    description: 'Independent dispute resolution for game item trades',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-}
+  title: "SolarLoot | Marketplace of Gaming Values",
+  description: "Secure peer-to-peer escrow marketplace for gaming items, skins, currency, accounts and boosting.",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground grid-pattern relative overflow-x-hidden selection:bg-primary/30 selection:text-white">
+        {/* Subtle orange ambient glow in the background */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] pointer-events-none radial-glow z-0" />
+        
+        <Navbar />
+        
+        <main className="flex-grow flex flex-col relative z-10">
+          {children}
+        </main>
+
+        <footer className="border-t border-white/5 bg-background relative z-10 py-8 text-center text-xs text-zinc-500">
+          <div className="container mx-auto px-4">
+            <p className="mb-2">© {new Date().getFullYear()} SolarLoot. All rights reserved.</p>
+            <p className="max-w-md mx-auto text-[10px] text-zinc-600">
+              SolarLoot is a secure trading platform. In-game content, logos and trademarks are properties of their respective owners.
+            </p>
+          </div>
+        </footer>
+      </body>
     </html>
-  )
+  );
 }
