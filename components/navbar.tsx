@@ -1,16 +1,48 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { Gamepad2, Search, PlusCircle, User, LogOut, ShieldCheck, Menu, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Gamepad2, Search, PlusCircle, User, LogOut, Menu, X, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/utils/supabase/client'
 
 export default function Navbar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  // Simulation of auth state (can be replaced by real Supabase user later)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    // Check initial session
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setIsLoggedIn(true)
+        setUserEmail(data.user.email ?? null)
+      }
+    })
+
+    // Subscribe to auth changes (login/logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setUserEmail(session.user.email ?? null)
+      } else {
+        setIsLoggedIn(false)
+        setUserEmail(null)
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setIsLoggedIn(false)
+    setUserEmail(null)
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
@@ -35,13 +67,13 @@ export default function Navbar() {
             <Link href="/?category=boosting" className="text-zinc-400 hover:text-white transition">
               Boosting
             </Link>
-            <Link href="/#faq" className="text-zinc-400 hover:text-white transition">
+            <Link href="/#escrow-flow" className="text-zinc-400 hover:text-white transition">
               How it works
             </Link>
           </nav>
         </div>
 
-        {/* Search Bar - Linear style */}
+        {/* Search Bar */}
         <div className="hidden sm:flex relative flex-1 max-w-sm mx-4">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-zinc-500">
             <Search className="h-4 w-4" />
@@ -72,10 +104,10 @@ export default function Navbar() {
               <Link href="/profile">
                 <Button size="sm" variant="ghost" className="h-8 text-xs text-zinc-300 hover:text-white gap-1.5">
                   <User className="h-3.5 w-3.5" />
-                  Dashboard
+                  {userEmail ? userEmail.split('@')[0] : 'Dashboard'}
                 </Button>
               </Link>
-              <Button size="sm" variant="ghost" onClick={() => setIsLoggedIn(false)} className="h-8 w-8 p-0 text-zinc-500 hover:text-zinc-300">
+              <Button size="sm" variant="ghost" onClick={handleSignOut} className="h-8 w-8 p-0 text-zinc-500 hover:text-zinc-300" title="Sign Out">
                 <LogOut className="h-3.5 w-3.5" />
               </Button>
             </>
@@ -136,7 +168,7 @@ export default function Navbar() {
             Boosting
           </Link>
           <Link
-            href="/#faq"
+            href="/#escrow-flow"
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-sm text-zinc-300 hover:text-white"
           >
@@ -156,6 +188,9 @@ export default function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
+                <Button variant="ghost" onClick={handleSignOut} className="w-full justify-center text-xs h-9 text-zinc-400 hover:text-white">
+                  Sign Out
+                </Button>
               </>
             ) : (
               <>

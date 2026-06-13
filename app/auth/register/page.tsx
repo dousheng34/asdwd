@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, Mail, Lock, User } from 'lucide-react'
+import { ShieldCheck, Mail, Lock, User, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { createClient } from '@/utils/supabase/client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -16,18 +17,52 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
-    // Simulate Supabase sign up flow
-    setTimeout(() => {
+
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username },
+      },
+    })
+
+    if (authError) {
+      setError(authError.message)
       setLoading(false)
-      // Redirect to profile
-      router.push('/profile')
-    }, 1200)
+      return
+    }
+
+    // Supabase may require email confirmation depending on project settings.
+    // Show a success message; redirect after a short delay.
+    setSuccess(true)
+    setLoading(false)
+    setTimeout(() => router.push('/auth/login'), 3000)
+  }
+
+  if (success) {
+    return (
+      <div className="flex-grow flex items-center justify-center px-4 py-20">
+        <Card className="w-full max-w-md bg-zinc-900/20 border-white/5 shadow-2xl text-center">
+          <CardContent className="p-10 space-y-4">
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-emerald-400" />
+            </div>
+            <h2 className="text-lg font-bold text-white">Account Created!</h2>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Check your email for a confirmation link, then sign in to start trading.
+            </p>
+            <p className="text-[10px] text-zinc-600">Redirecting to login in 3 seconds...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -90,6 +125,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                   className="bg-zinc-950/40 border-white/5 pl-9 text-xs focus-visible:ring-primary/50 text-zinc-200"
                 />
               </div>
@@ -101,10 +137,10 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_0_15px_rgba(255,87,34,0.2)] text-xs h-10 transition-all"
             >
-              {loading ? 'Registering...' : 'Sign Up'}
+              {loading ? 'Registering...' : 'Create Account'}
             </Button>
             <div className="text-center text-xs text-zinc-500">
-              Already have an account?{' '}
+              {'Already have an account? '}
               <Link href="/auth/login" className="text-primary hover:underline font-medium">
                 Sign In
               </Link>

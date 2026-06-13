@@ -5,19 +5,21 @@ import Link from 'next/link'
 import { 
   ShieldCheck, 
   MessageSquare, 
-  Coins, 
   Clock, 
   User, 
   Star, 
   Check, 
   ArrowLeft, 
-  Send 
+  Send,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/utils/supabase/client'
 import PaymentUploadForm from '@/components/PaymentUploadForm'
+import DisputeForm from '@/components/DisputeForm'
 
 const MOCK_LISTINGS = {
   'l1': {
@@ -292,12 +294,25 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
                       <ShieldCheck className="h-4 w-4" /> Deal Initialized!
                     </div>
                     <p className="text-[11px] text-emerald-500/80 leading-snug">
-                      Your order #{createdOrderId.substring(0, 8)} is pending. Please upload payment receipt to lock the funds.
+                      Order #{createdOrderId.substring(0, 8)} is pending. Upload your Kaspi receipt to confirm payment.
                     </p>
                   </div>
                   
                   {/* Payment Receipt Upload Form */}
                   <PaymentUploadForm orderId={createdOrderId} />
+
+                  {/* Dispute option after payment */}
+                  <div className="border-t border-white/5 pt-3">
+                    <details className="group">
+                      <summary className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 cursor-pointer list-none transition">
+                        <AlertTriangle className="h-3 w-3 text-amber-500/70" />
+                        Issue with your order? Open a dispute
+                      </summary>
+                      <div className="mt-3">
+                        <DisputeForm orderId={createdOrderId} />
+                      </div>
+                    </details>
+                  </div>
                 </div>
               ) : (
                 <Button 
@@ -311,12 +326,12 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
                       Creating Order...
                     </>
                   ) : (
-                    'Buy Now'
+                    'Buy Now — Escrow Protected'
                   )}
                 </Button>
               )}
             </CardContent>
-            <CardFooter className="p-6 pt-0 text-[10px] text-zinc-500 text-center flex flex-col gap-2 border-t border-white/5 pt-4">
+            <CardFooter className="p-6 pt-4 text-[10px] text-zinc-500 text-center flex flex-col gap-2 border-t border-white/5">
               <span className="flex items-center gap-1 justify-center text-zinc-400">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary" /> SolarLoot Trade Protection
               </span>
@@ -332,6 +347,3 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
     </div>
   )
 }
-
-// Extra loaders import to support Spinner
-import { Loader2 } from 'lucide-react'

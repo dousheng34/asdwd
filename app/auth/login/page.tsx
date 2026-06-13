@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, Mail, Lock, ArrowRight } from 'lucide-react'
+import { ShieldCheck, Mail, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,13 +21,21 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
-    // Simulate Supabase login flow
-    setTimeout(() => {
+
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (authError) {
+      setError(authError.message)
       setLoading(false)
-      // Redirect to profile
-      router.push('/profile')
-    }, 1200)
+      return
+    }
+
+    router.push('/profile')
+    router.refresh()
   }
 
   return (
@@ -93,7 +102,7 @@ export default function LoginPage() {
               {loading ? 'Authenticating...' : 'Sign In'}
             </Button>
             <div className="text-center text-xs text-zinc-500">
-              Don't have an account?{' '}
+              {"Don't have an account? "}
               <Link href="/auth/register" className="text-primary hover:underline font-medium">
                 Register
               </Link>
