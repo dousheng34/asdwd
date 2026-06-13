@@ -55,6 +55,13 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
       const fileName = `${orderId}_${Date.now()}.${fileExt}`
       const filePath = `receipts/${fileName}`
 
+      // Create receipts bucket if it doesn't exist (fails silently if already exists or no permission, which is fine)
+      try {
+        await supabase.storage.createBucket('receipts', { public: true })
+      } catch (bucketErr) {
+        // Safe to ignore if already exists
+      }
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, file, {
@@ -77,17 +84,21 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
 
       const receiptImageUrl = urlData.publicUrl
 
-      // 3. Update orders table in Supabase (receipt_image_url and status = 'created')
+      // 3. Update transactions table (delivery_proof = JSON, status = 'escrow')
+      const deliveryProofJson = JSON.stringify({
+        receipt_image_url: receiptImageUrl
+      })
+
       const { error: dbError } = await supabase
-        .from('orders')
+        .from('transactions')
         .update({
-          receipt_image_url: receiptImageUrl,
-          status: 'created'
+          delivery_proof: deliveryProofJson,
+          status: 'escrow'
         })
         .eq('id', orderId)
 
       if (dbError) {
-        throw new Error(`Failed to update order in database: ${dbError.message}`)
+        throw new Error(`Failed to update transaction in database: ${dbError.message}`)
       }
 
       setPublicUrl(receiptImageUrl)
@@ -122,7 +133,7 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
           </div>
           <h3 className="text-xs font-semibold text-zinc-200">Receipt Sent</h3>
           <p className="text-[11px] text-zinc-400 leading-relaxed max-w-xs mx-auto">
-            Your receipt was uploaded. Order status is now set to <strong>created</strong>. Gumloop is processing your verification.
+            Your receipt was uploaded. Transaction status is now set to <strong>escrow</strong>. Lindy AI is ready to verify your delivery.
           </p>
           {publicUrl && (
             <div className="mt-2 text-[10px]">

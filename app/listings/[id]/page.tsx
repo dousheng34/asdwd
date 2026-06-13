@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   ShieldCheck, 
@@ -21,94 +21,73 @@ import { createClient } from '@/utils/supabase/client'
 import PaymentUploadForm from '@/components/PaymentUploadForm'
 import DisputeForm from '@/components/DisputeForm'
 
-const MOCK_LISTINGS = {
-  'l1': {
-    title: 'M9 Bayonet | Fade (FN 98% Fade)',
-    game: 'Counter-Strike 2',
-    category: 'Items',
-    price: 1420.00,
-    seller: 'AetherSkins',
-    seller_id: 'd1b07384-d113-4ec6-a558-713069b1836c', // UUID
-    seller_telegram_id: 111111111, // BIGINT
-    sellerRating: 4.9,
-    sellerSales: 482,
-    deliveryTime: 'Instant',
-    desc: 'Extremely clean factory new M9 Bayonet. Fade percentage is verified at 98.2%. Float value is 0.0102. Fully ready to transfer to your Steam account. We will transfer it instantly via Steam Trade Offer as soon as you confirm payment on SolarLoot.',
-    specs: [
-      { label: 'Float Value', value: '0.0102' },
-      { label: 'Fade %', value: '98.2%' },
-      { label: 'Tradable', value: 'Yes, Instantly' }
-    ]
-  },
-  'l2': {
-    title: '100,000 Gold (US-Sargeras Alliance)',
-    game: 'World of Warcraft',
-    category: 'Currency',
-    price: 85.00,
-    seller: 'WowGoldDealer',
-    seller_id: 'd2b07384-d113-4ec6-a558-713069b1836c', // UUID
-    seller_telegram_id: 222222222, // BIGINT
-    sellerRating: 4.8,
-    sellerSales: 2153,
-    deliveryTime: '10 mins',
-    desc: 'Pure WoW gold farmed legitimately. Available for Alliance side on US-Sargeras realm. Delivery methods include face-to-face trade in Stormwind, ingame mail, or guild bank deposit. Please state your character name and preferred method of delivery in checkout chat.',
-    specs: [
-      { label: 'Faction', value: 'Alliance' },
-      { label: 'Region', value: 'US' },
-      { label: 'Realm', value: 'Sargeras' }
-    ]
-  },
-  'l3': {
-    title: 'Immortal 3 Account (All Agents, 12 Skins)',
-    game: 'Valorant',
-    category: 'Accounts',
-    price: 240.00,
-    seller: 'SmurfStore',
-    seller_id: 'd3b07384-d113-4ec6-a558-713069b1836c', // UUID
-    seller_telegram_id: 333333333, // BIGINT
-    sellerRating: 4.7,
-    sellerSales: 129,
-    deliveryTime: 'Instant',
-    desc: 'Unverified email account, completely safe and eligible for full email changing. Current rank is Immortal 3, peak rank Radiant. Includes popular skins: Reaver Vandal, Prime Vandal, Ion Phantom, and Sovereign Sword. Full lifetime recovery warranty.',
-    specs: [
-      { label: 'Current Rank', value: 'Immortal 3' },
-      { label: 'Peak Rank', value: 'Radiant' },
-      { label: 'Skins Count', value: '12 premium' }
-    ]
-  },
-  'l4': {
-    title: '1-1000 MMR Rank Boost (Solo/Duo)',
-    game: 'Dota 2',
-    category: 'Boosting',
-    price: 75.00,
-    seller: 'DotabuffPro',
-    seller_id: 'd4b07384-d113-4ec6-a558-713069b1836c', // UUID
-    seller_telegram_id: 444444444, // BIGINT
-    sellerRating: 5.0,
-    sellerSales: 87,
-    deliveryTime: '24 hours',
-    desc: 'Professional MMR boosting service by a 9.5k MMR top-100 player. Done via VPN for maximum safety of your Steam account. We will gain 1000 MMR on your account in less than 24 hours. Alternatively, we can play Duo queue (+20% price adjustment).',
-    specs: [
-      { label: 'MMR range', value: '1 to 1000 MMR' },
-      { label: 'Booster Rank', value: 'Top 100 Radiant' },
-      { label: 'Play Method', value: 'Solo (Acc share) or Duo' }
-    ]
-  }
-}
-
 export default function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
-  const id = resolvedParams.id as keyof typeof MOCK_LISTINGS
-  const listing = MOCK_LISTINGS[id] || MOCK_LISTINGS['l1'] // Fallback if id not found
+  const id = resolvedParams.id
+  const supabase = createClient()
+
+  const [listing, setListing] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
   
-  const [messages, setMessages] = useState([
-    { sender: listing.seller, content: 'Hey! Let me know if you have any questions about this offer.', time: '10 mins ago' }
-  ])
+  const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [purchaseSuccess, setPurchaseSuccess] = useState(false)
   const [purchasing, setPurchasing] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadListingAndUser() {
+      setLoading(true)
+      setError(null)
+      try {
+        // 1. Get user session
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        setUser(currentUser)
+
+        // 2. Fetch listing by UUID
+        const { data: listingData, error: listingError } = await supabase
+          .from('listings')
+          .select(`
+            id,
+            title,
+            description,
+            price,
+            stock,
+            status,
+            created_at,
+            game:games(id, name, slug),
+            category:categories(id, name, slug),
+            seller:profiles(id, username, rating, sales_count)
+          `)
+          .eq('id', id)
+          .single()
+
+        if (listingError) throw listingError
+        setListing(listingData)
+
+        // Extract delivery time from description format: [Delivery: XXX]
+        const deliveryMatch = listingData?.description?.match(/^\[Delivery: ([^\]]+)\]/)
+        const deliveryVal = deliveryMatch ? deliveryMatch[1] : 'Instant'
+
+        setMessages([
+          { 
+            sender: listingData?.seller?.username || 'Seller', 
+            content: `Hey! Let me know if you have any questions about this offer. Delivery is estimated at ${deliveryVal}.`, 
+            time: 'Just now' 
+          }
+        ])
+      } catch (err: any) {
+        console.error('Error loading listing details:', err)
+        setError('Listing not found or connection to database failed.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadListingAndUser()
+  }, [id])
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,20 +97,26 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const handlePurchase = async () => {
+    if (!user) {
+      setError('You must be logged in to buy items. Please sign in.')
+      return
+    }
+
+    if (user.id === listing?.seller?.id) {
+      setError('You cannot buy your own listing!')
+      return
+    }
+
     setPurchasing(true)
     setError(null)
     try {
-      const supabase = createClient()
-      
-      // Perform database insert into the orders table
-      // Storing listing_id, seller_id, seller_telegram_id, buyer_id, amount and initial status
+      // Create escrow transaction in Supabase
       const { data, error: insertError } = await supabase
-        .from('orders')
+        .from('transactions')
         .insert({
-          listing_id: id,
-          seller_id: listing.seller_id,
-          seller_telegram_id: listing.seller_telegram_id, // BIGINT column
-          buyer_id: 'd5b07384-d113-4ec6-a558-713069b1836d', // Mock buyer UUID
+          listing_id: listing.id,
+          buyer_id: user.id,
+          seller_id: listing.seller.id,
           amount: listing.price,
           status: 'pending'
         })
@@ -144,11 +129,47 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
       setPurchaseSuccess(true)
     } catch (err: any) {
       console.error('Purchase initialization error:', err)
-      setError(err.message || 'Failed to initialize deal in database.')
+      setError(err.message || 'Failed to initialize transaction in database.')
     } finally {
       setPurchasing(false)
     }
   }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        <span className="text-zinc-500 text-xs">Loading listing details...</span>
+      </div>
+    )
+  }
+
+  if (error && !listing) {
+    return (
+      <div className="container mx-auto max-w-md px-4 py-16 text-center space-y-4">
+        <AlertTriangle className="h-10 w-10 text-zinc-500 mx-auto" />
+        <h2 className="text-lg font-bold text-white">Offer Not Found</h2>
+        <p className="text-xs text-zinc-500">{error}</p>
+        <Link href="/">
+          <Button size="sm" variant="outline" className="border-white/10 hover:border-white/20 text-xs text-zinc-300">
+            Back to Home
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  // Parse delivery time and description
+  const deliveryMatch = listing.description?.match(/^\[Delivery: ([^\]]+)\]/)
+  const deliveryTime = deliveryMatch ? deliveryMatch[1] : 'Instant'
+  const cleanDescription = listing.description?.replace(/^\[Delivery: [^\]]+\]\s*/, '') || ''
+
+  // Generate dynamic specs for nice visuals
+  const specs = [
+    { label: 'Delivery Method', value: 'P2P / Escrow' },
+    { label: 'Quantity Available', value: `${listing.stock} units` },
+    { label: 'Security', value: '100% Protected' }
+  ]
 
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -165,10 +186,10 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded bg-zinc-800 border border-white/5 text-zinc-400 text-[10px] font-mono">
-                {listing.game}
+                {listing.game?.name}
               </span>
               <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold">
-                {listing.category}
+                {listing.category?.name}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
@@ -179,22 +200,22 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 border-b border-white/5 pb-4">
               <div className="flex items-center gap-1">
                 <User className="h-4 w-4 text-zinc-500" />
-                <span className="font-semibold text-white">{listing.seller}</span>
+                <span className="font-semibold text-white">{listing.seller?.username || 'gamer_store'}</span>
               </div>
               <div className="flex items-center gap-0.5">
                 <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                <span className="text-white font-semibold">{listing.sellerRating}</span>
+                <span className="text-white font-semibold">{listing.seller?.rating?.toFixed(1) || '5.0'}</span>
               </div>
               <div className="text-zinc-600">•</div>
-              <div>{listing.sellerSales} completed sales</div>
+              <div>{listing.seller?.sales_count || '0'} completed sales</div>
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-white">Item Description</h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-light">
-              {listing.desc}
+            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-light whitespace-pre-line">
+              {cleanDescription || 'No description provided.'}
             </p>
           </div>
 
@@ -202,7 +223,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           <div className="p-6 rounded-xl bg-zinc-900/10 border border-white/5 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Offer Specifications</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {listing.specs.map((spec, i) => (
+              {specs.map((spec, i) => (
                 <div key={i} className="space-y-1">
                   <div className="text-[10px] text-zinc-500">{spec.label}</div>
                   <div className="text-xs font-semibold text-zinc-200">{spec.value}</div>
@@ -218,7 +239,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
                 <MessageSquare className="h-4 w-4 text-primary" />
                 <span className="text-xs font-semibold text-zinc-300">Pre-Purchase Chat with Seller</span>
               </div>
-              <span className="text-[10px] text-zinc-500">Usually replies in {listing.deliveryTime}</span>
+              <span className="text-[10px] text-zinc-500">Usually replies in {deliveryTime}</span>
             </div>
             
             <div className="p-4 flex-grow overflow-y-auto space-y-4 text-xs">
@@ -270,7 +291,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Expected Delivery</span>
                   <span className="text-zinc-200 font-medium flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-primary" /> {listing.deliveryTime}
+                    <Clock className="h-3 w-3 text-primary" /> {deliveryTime}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

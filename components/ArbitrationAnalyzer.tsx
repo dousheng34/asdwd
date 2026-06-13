@@ -24,21 +24,33 @@ export default function ArbitrationAnalyzer({ orderId, initialVerdict }: Arbitra
     setError(null)
     try {
       const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select('arbitration_verdict, status')
+        .from('transactions')
+        .select('delivery_proof, status')
         .eq('id', orderId)
         .single()
 
       if (fetchError) throw fetchError
 
-      if (data?.arbitration_verdict) {
-        // Parse if saved as a string, or set directly
-        const parsed = typeof data.arbitration_verdict === 'string'
-          ? JSON.parse(data.arbitration_verdict)
-          : data.arbitration_verdict
-        setVerdict(parsed)
+      if (data?.delivery_proof) {
+        try {
+          const parsedProof = JSON.parse(data.delivery_proof)
+          if (parsedProof.arbitration_verdict) {
+            setVerdict(parsedProof.arbitration_verdict)
+          } else {
+            setVerdict(null)
+          }
+        } catch (e) {
+          setVerdict(null)
+        }
       } else {
         setVerdict(null)
+      }
+      
+      // If the transaction status is already canceled or completed, set the executed message
+      if (data?.status === 'canceled') {
+        setExecutedMessage('Arbitration complete: Order cancelled and funds successfully refunded to the buyer.')
+      } else if (data?.status === 'completed') {
+        setExecutedMessage('Arbitration complete: Order confirmed and escrow funds released to the seller.')
       }
     } catch (err: any) {
       console.error('Error fetching verdict:', err)
@@ -63,13 +75,12 @@ export default function ArbitrationAnalyzer({ orderId, initialVerdict }: Arbitra
       const finalStatus = resolution === 'refund' ? 'canceled' : 'completed'
       
       const { error: updateError } = await supabase
-        .from('orders')
+        .from('transactions')
         .update({ status: finalStatus })
         .eq('id', orderId)
 
       if (updateError) throw updateError
 
-      // Simulate balance updates for buyer/seller based on resolution
       setExecutedMessage(
         resolution === 'refund' 
           ? 'Arbitration complete: Order cancelled and funds successfully refunded to the buyer.'
@@ -110,13 +121,11 @@ export default function ArbitrationAnalyzer({ orderId, initialVerdict }: Arbitra
   }
 
   // Lindy AI Verdict parameters mapping
-  const resolution = verdict.recommended_resolution || 'refund' // 'refund' | 'release'
-  const confidence = verdict.confidence_score || 0.92
-  const reasoning = verdict.reasoning_points || [
-    'Seller provided no screenshots of delivery in chat within the expected timeframe.',
-    'Buyer communicated actively and confirmed non-delivery of items.',
-    'No in-game logs confirm trading of specified value.'
-  ]
+  const resolution = verdict.verdict === 'REFUND' ? 'refund' : 'release'
+  const confidence = verdict.confidence || 90
+  const reasoning = Array.isArray(verdict.reasoning) 
+    ? verdict.reasoning 
+    : [verdict.reasoning || 'No details reasoning provided by arbitration system.']
 
   return (
     <Card className="bg-zinc-900/40 border-white/5 shadow-xl overflow-hidden">
@@ -126,7 +135,7 @@ export default function ArbitrationAnalyzer({ orderId, initialVerdict }: Arbitra
             Lindy AI Arbitration Report
           </CardTitle>
           <span className="text-[10px] font-mono font-semibold text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
-            CONFIDENCE: {(confidence * 100).toFixed(0)}%
+            CONFIDENCE: {confidence}%
           </span>
         </div>
       </CardHeader>
