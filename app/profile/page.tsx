@@ -442,7 +442,7 @@ export default function ProfilePage() {
                   {purchases.map((purchase) => (
                     <div key={purchase.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-zinc-900/20 transition gap-4 text-xs">
                       <div className="space-y-1">
-                        <Link href={`/listings/${purchase.listing?.id || ''}`} className="font-semibold text-zinc-200 hover:text-primary transition-colors">
+                        <Link href={`/orders/${purchase.id}`} className="font-semibold text-zinc-200 hover:text-primary transition-colors">
                           {purchase.listing?.title || 'Unknown Gaming Value Offer'}
                         </Link>
                         <div className="text-[10px] text-zinc-500 flex items-center gap-2">
@@ -532,7 +532,7 @@ export default function ProfilePage() {
                   {sales.map((sale) => (
                     <div key={sale.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-zinc-900/20 transition gap-4 text-xs">
                       <div className="space-y-1">
-                        <Link href={`/listings/${sale.listing?.id || ''}`} className="font-semibold text-zinc-200 hover:text-primary transition-colors">
+                        <Link href={`/orders/${sale.id}`} className="font-semibold text-zinc-200 hover:text-primary transition-colors">
                           {sale.listing?.title || 'Unknown Gaming Value Offer'}
                         </Link>
                         <div className="text-[10px] text-zinc-500 flex items-center gap-2">

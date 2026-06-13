@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { 
   ShieldCheck, 
   MessageSquare, 
@@ -18,12 +19,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/utils/supabase/client'
-import PaymentUploadForm from '@/components/PaymentUploadForm'
-import DisputeForm from '@/components/DisputeForm'
 
 export default function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const id = resolvedParams.id
+  const router = useRouter()
   const supabase = createClient()
 
   const [listing, setListing] = useState<any>(null)
@@ -32,9 +32,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [purchaseSuccess, setPurchaseSuccess] = useState(false)
   const [purchasing, setPurchasing] = useState(false)
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -125,8 +123,8 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
 
       if (insertError) throw insertError
 
-      setCreatedOrderId(data.id)
-      setPurchaseSuccess(true)
+      // Redirect directly to the dedicated order page, like Playerok
+      router.push(`/orders/${data.id}`)
     } catch (err: any) {
       console.error('Purchase initialization error:', err)
       setError(err.message || 'Failed to initialize transaction in database.')
@@ -308,49 +306,20 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
-              {purchaseSuccess && createdOrderId ? (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 space-y-1.5">
-                    <div className="font-semibold flex items-center gap-1">
-                      <ShieldCheck className="h-4 w-4" /> Deal Initialized!
-                    </div>
-                    <p className="text-[11px] text-emerald-500/80 leading-snug">
-                      Order #{createdOrderId.substring(0, 8)} is pending. Upload your Kaspi receipt to confirm payment.
-                    </p>
-                  </div>
-                  
-                  {/* Payment Receipt Upload Form */}
-                  <PaymentUploadForm orderId={createdOrderId} />
-
-                  {/* Dispute option after payment */}
-                  <div className="border-t border-white/5 pt-3">
-                    <details className="group">
-                      <summary className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 cursor-pointer list-none transition">
-                        <AlertTriangle className="h-3 w-3 text-amber-500/70" />
-                        Issue with your order? Open a dispute
-                      </summary>
-                      <div className="mt-3">
-                        <DisputeForm orderId={createdOrderId} />
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              ) : (
-                <Button 
-                  onClick={handlePurchase}
-                  disabled={purchasing}
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_0_15px_rgba(255,87,34,0.2)] h-11 text-xs"
-                >
-                  {purchasing ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
-                      Creating Order...
-                    </>
-                  ) : (
-                    'Buy Now — Escrow Protected'
-                  )}
-                </Button>
-              )}
+              <Button 
+                onClick={handlePurchase}
+                disabled={purchasing}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_0_15px_rgba(255,87,34,0.2)] h-11 text-xs animate-shimmer"
+              >
+                {purchasing ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                    Creating Order...
+                  </>
+                ) : (
+                  'Buy Now — Escrow Protected'
+                )}
+              </Button>
             </CardContent>
             <CardFooter className="p-6 pt-4 text-[10px] text-zinc-500 text-center flex flex-col gap-2 border-t border-white/5">
               <span className="flex items-center gap-1 justify-center text-zinc-400">
