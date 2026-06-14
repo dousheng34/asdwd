@@ -162,3 +162,56 @@ INSERT INTO public.categories (name, slug, icon) VALUES
 ('Accounts', 'accounts', 'UserCheck'),
 ('Boosting', 'boosting', 'TrendingUp')
 ON CONFLICT DO NOTHING;
+
+
+-- 7. LISTING SECRETS Table (Auto-delivery)
+CREATE TABLE IF NOT EXISTS public.listing_secrets (
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE PRIMARY KEY,
+    secret_data TEXT NOT NULL
+);
+
+ALTER TABLE public.listing_secrets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Sellers can manage their own listing secrets" ON public.listing_secrets
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.listings
+            WHERE listings.id = listing_secrets.listing_id AND listings.seller_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Buyers can view secrets of paid transactions" ON public.listing_secrets
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.transactions
+            WHERE transactions.listing_id = listing_secrets.listing_id 
+              AND transactions.buyer_id = auth.uid()
+              AND transactions.status IN ('escrow', 'completed', 'disputed')
+        )
+    );
+
+
+-- 8. REVIEWS Table
+CREATE TABLE IF NOT EXISTS public.reviews (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    transaction_id UUID REFERENCES public.transactions(id) ON DELETE CASCADE UNIQUE,
+    seller_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    buyer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    rating INTEGER CHECK (rating IN (1, 5)) NOT NULL, -- 1 = Negative, 5 = Positive
+    comment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Reviews are viewable by everyone" ON public.reviews
+    FOR SELECT USING (true);
+
+CREATE POLICY "Buyers can write reviews for completed transactions" ON public.reviews
+    FOR INSERT WITH CHECK (
+        auth.uid() = buyer_id AND 
+        EXISTS (
+            SELECT 1 FROM public.transactions
+            WHERE transactions.id = transaction_id AND transactions.status = 'completed'
+        )
+    );

@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   Lock,
   ThumbsUp,
-  Scale
+  Scale,
+  Key,
+  Copy
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +27,7 @@ import { createClient } from '@/utils/supabase/client'
 import PaymentUploadForm from '@/components/PaymentUploadForm'
 import DisputeForm from '@/components/DisputeForm'
 import ArbitrationAnalyzer from '@/components/ArbitrationAnalyzer'
+import ReviewForm from '@/components/ReviewForm'
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -39,6 +42,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [user, setUser] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   
+  // Auto-delivery credentials
+  const [secret, setSecret] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  // Review Status
+  const [hasReviewed, setHasReviewed] = useState(false)
+
   // Delivery confirmation action loader
   const [confirmLoading, setConfirmLoading] = useState(false)
 
@@ -86,6 +96,30 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         .order('created_at', { ascending: true })
 
       setMessages(msgsData || [])
+
+      // 4. Try loading Auto-delivery secret if status permits (escrow, completed, disputed)
+      if (txData.status !== 'pending') {
+        const { data: secretData } = await supabase
+          .from('listing_secrets')
+          .select('secret_data')
+          .eq('listing_id', txData.listing.id)
+          .maybeSingle()
+
+        if (secretData) {
+          setSecret(secretData.secret_data)
+        }
+      }
+
+      // 5. Check if buyer has already reviewed this transaction
+      const { data: reviewData } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('transaction_id', id)
+        .maybeSingle()
+
+      if (reviewData) {
+        setHasReviewed(true)
+      }
     } catch (err: any) {
       console.error('Error loading order data:', err)
       setError(err.message || 'Failed to load transaction details.')
@@ -97,7 +131,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     loadOrderData()
 
-    // 4. Set up real-time subscription for messages and transaction changes
+    // 6. Set up real-time subscription for messages and transaction changes
     const channel = supabase
       .channel(`order-room-${id}`)
       .on(
@@ -199,6 +233,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     } finally {
       setConfirmLoading(false)
     }
+  }
+
+  const handleCopyToClipboard = () => {
+    if (!secret) return
+    navigator.clipboard.writeText(secret)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (loading) {
@@ -399,10 +440,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         </div>
 
-        {/* Right Column: Escrow Steps & Active Actions */}
+        {/* Right Column: Escrow Steps, Auto-Delivery Secret & Review */}
         <div className="space-y-6">
           
-          {/* Action Steps Card */}
+          {/* AUTO-DELIVERY SECRET PANEL (Playerok Key Feature) */}
+          {secret && (
+            <Card className="bg-primary/5 border-primary/20 shadow-xl overflow-hidden relative border-dashed">
+              <CardHeader className="p-5 border-b border-primary/10 bg-primary/10">
+                <CardTitle className="text-xs uppercase font-bold tracking-wider text-primary flex items-center gap-1.5 animate-pulse">
+                  <Key className="h-4 w-4 text-primary" /> Auto-Delivery Released (Автовыдача)
+                </CardTitle>
+                <CardDescription className="text-[10px] text-zinc-400">
+                  Your purchase details have been released securely.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-5 space-y-3">
+                <div className="p-3 bg-zinc-950/60 rounded-lg border border-white/5 font-mono text-xs text-zinc-200 break-all select-all relative group max-h-[120px] overflow-y-auto">
+                  {secret}
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleCopyToClipboard}
+                  className="w-full text-[10px] border-primary/20 hover:border-primary/40 text-zinc-300 gap-1.5 h-8 bg-zinc-900/20"
+                >
+                  {copied ? 'Copied to Clipboard!' : 'Copy to Clipboard (Копировать)'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Action Steps & Reviews Card */}
           <Card className="bg-zinc-900/20 border-white/5 shadow-xl">
             <CardHeader className="border-b border-white/5 pb-4">
               <CardTitle className="text-xs uppercase font-bold tracking-wider text-zinc-400">Escrow Guidelines</CardTitle>
@@ -410,8 +478,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </CardHeader>
             
             <CardContent className="p-5 space-y-4">
-              
-              {/* Dynamic instruction based on user role and transaction status */}
               
               {/* STATUS: PENDING */}
               {tx.status === 'pending' && (
@@ -440,7 +506,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-lg bg-amber-500/5 border border-amber-500/10 text-xs text-zinc-300 space-y-2 leading-relaxed">
                       <p className="font-semibold text-amber-400">🔒 Step 2: Receive & Verify Items</p>
-                      <p className="text-[11px] text-zinc-400">The seller has been notified that payment is frozen. Wait for them to deliver the items. After verifying details, confirm delivery to release funds.</p>
+                      <p className="text-[11px] text-zinc-400">
+                        {secret 
+                          ? 'Auto-Delivery has released your item details above. Check the credentials. If everything works, click Confirm below.' 
+                          : 'The seller has been notified that payment is frozen. Wait for them to deliver the items. After verifying details, confirm delivery to release funds.'}
+                      </p>
                     </div>
 
                     <Button 
@@ -477,7 +547,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-xs text-zinc-300 space-y-2 leading-relaxed">
                       <p className="font-semibold text-emerald-400">💰 Step 2: Deliver Items to Buyer</p>
-                      <p className="text-[11px] text-zinc-400">Payment of **${parseFloat(tx.amount).toFixed(2)}** is frozen in escrow. It is now completely safe to deliver the accounts/gold. Chat with the buyer to coordinate delivery.</p>
+                      <p className="text-[11px] text-zinc-400">
+                        {secret 
+                          ? 'This listing had **Auto-Delivery** enabled. The credentials have been securely released to the buyer. You do not need to do anything!' 
+                          : 'Payment of **$' + parseFloat(tx.amount).toFixed(2) + '** is frozen in escrow. It is now completely safe to deliver the accounts/gold. Chat with the buyer to coordinate delivery.'}
+                      </p>
                     </div>
                     {receiptImageUrl && (
                       <div className="p-3.5 rounded bg-zinc-950/40 border border-white/5 text-[10px] space-y-1.5">
@@ -518,18 +592,38 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
               {/* STATUS: COMPLETED */}
               {tx.status === 'completed' && (
-                <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-xs text-zinc-400 leading-relaxed text-center space-y-3 py-6">
-                  <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
-                    <ShieldCheck className="h-6 w-6" />
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-xs text-zinc-400 leading-relaxed text-center space-y-3 py-6">
+                    <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+                      <ShieldCheck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">Escrow Released & Completed</p>
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        {isBuyer 
+                          ? 'You confirmed delivery. The transaction is complete.' 
+                          : 'The buyer confirmed delivery. Funds have been released to your balance.'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-white">Escrow Released & Completed</p>
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      {isBuyer 
-                        ? 'You confirmed delivery. The transaction is complete.' 
-                        : 'The buyer confirmed delivery. Funds have been released to your balance.'}
-                    </p>
-                  </div>
+
+                  {/* Review Form for Buyer after completion */}
+                  {isBuyer && !hasReviewed && (
+                    <div className="border-t border-white/5 pt-4">
+                      <ReviewForm 
+                        transactionId={tx.id} 
+                        sellerId={tx.seller.id} 
+                        buyerId={tx.buyer.id} 
+                        onReviewSubmitted={() => setHasReviewed(true)} 
+                      />
+                    </div>
+                  )}
+
+                  {isBuyer && hasReviewed && (
+                    <div className="p-3 rounded bg-emerald-500/5 border border-emerald-500/10 text-[10px] text-center text-zinc-400">
+                      ✓ Feedback Submitted. Thanks!
+                    </div>
+                  )}
                 </div>
               )}
 

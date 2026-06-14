@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Gamepad2, Coins, Sword, ShieldAlert, ArrowLeft, Loader2, LogIn } from 'lucide-react'
+import { Gamepad2, Coins, Sword, ShieldAlert, ArrowLeft, Loader2, LogIn, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ export default function CreateListingPage() {
   const [game, setGame] = useState('')
   const [category, setCategory] = useState('')
   const [delivery, setDelivery] = useState('Instant') // Saved in description or UI-only if not in schema
+  const [autoDeliveryData, setAutoDeliveryData] = useState('') // Optional auto-delivery credentials
   
   const [loading, setLoading] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
@@ -122,7 +123,8 @@ export default function CreateListingPage() {
       // Format description to include delivery details if they differ from description
       const finalDescription = `[Delivery: ${delivery}] ${description}`
 
-      const { data, error: insertError } = await supabase
+      // 1. Insert active listing
+      const { data: listingData, error: insertError } = await supabase
         .from('listings')
         .insert({
           title,
@@ -137,6 +139,22 @@ export default function CreateListingPage() {
         .select()
 
       if (insertError) throw insertError
+
+      // 2. If auto delivery data is supplied, write it to listing_secrets securely
+      if (autoDeliveryData.trim() && listingData && listingData.length > 0) {
+        const { error: secretError } = await supabase
+          .from('listing_secrets')
+          .insert({
+            listing_id: listingData[0].id,
+            secret_data: autoDeliveryData.trim()
+          })
+        
+        if (secretError) {
+          console.error('Failed to save listing secret:', secretError)
+          // We don't block the listing creation, but alert user or delete listing (blocking is safer for sellers)
+          throw new Error(`Listing created, but failed to save secure auto-delivery credentials: ${secretError.message}`)
+        }
+      }
 
       router.push('/')
     } catch (err: any) {
@@ -318,6 +336,25 @@ export default function CreateListingPage() {
                   className="bg-zinc-950/40 border-white/5 text-xs focus-visible:ring-primary/50 text-zinc-200"
                 />
               </div>
+            </div>
+
+            {/* Auto-Delivery Data Panel (Playerok key feature) */}
+            <div className="space-y-2 border-t border-white/5 pt-6">
+              <Label htmlFor="secret" className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <Key className="h-4 w-4 text-primary" /> Auto-Delivery Credentials (Optional)
+              </Label>
+              <textarea
+                id="secret"
+                placeholder="Enter digital keys, steam codes, or account credentials (e.g. login:password) here.
+This is stored securely and ONLY shown to the buyer immediately AFTER payment."
+                rows={2}
+                value={autoDeliveryData}
+                onChange={(e) => setAutoDeliveryData(e.target.value)}
+                className="w-full bg-zinc-950/40 text-zinc-200 placeholder-zinc-500 border border-white/5 rounded-md p-3 text-xs focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              <span className="text-[10px] text-zinc-500 block leading-normal">
+                If filled, the trade is completed instantly. The system will deliver these credentials to the buyer as soon as their payment receipt is submitted.
+              </span>
             </div>
 
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 flex items-start gap-3 text-xs text-zinc-400">
