@@ -6,6 +6,7 @@ import { FileImage, Loader2, ShieldCheck, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { useTranslation } from '@/lib/i18n'
 
 interface PaymentUploadFormProps {
   orderId: string;
@@ -14,6 +15,9 @@ interface PaymentUploadFormProps {
 
 export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: PaymentUploadFormProps) {
   const supabase = createClient()
+  const { t } = useTranslation()
+  const pt = t('payment')
+
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,11 +59,11 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
       const fileName = `${orderId}_${Date.now()}.${fileExt}`
       const filePath = `receipts/${fileName}`
 
-      // Create receipts bucket if it doesn't exist (fails silently if already exists or no permission, which is fine)
+      // Create receipts bucket if it doesn't exist
       try {
         await supabase.storage.createBucket('receipts', { public: true })
       } catch (bucketErr) {
-        // Safe to ignore if already exists
+        // Safe to ignore
       }
 
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -119,10 +123,10 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
       <CardHeader className="p-5 border-b border-white/5 bg-zinc-900/20">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <Upload className="h-4 w-4 text-primary" />
-          Confirm Order Payment
+          {pt.title}
         </CardTitle>
         <CardDescription className="text-[11px] text-zinc-500">
-          Upload your Kaspi receipt screenshot to verify and process your escrow payment.
+          {pt.desc}
         </CardDescription>
       </CardHeader>
 
@@ -131,9 +135,9 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
           <div className="h-9 w-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
             <ShieldCheck className="h-5 w-5 text-emerald-400" />
           </div>
-          <h3 className="text-xs font-semibold text-zinc-200">Receipt Sent</h3>
+          <h3 className="text-xs font-semibold text-zinc-200">{t('common').success}</h3>
           <p className="text-[11px] text-zinc-400 leading-relaxed max-w-xs mx-auto">
-            Your receipt was uploaded. Transaction status is now set to <strong>escrow</strong>. Lindy AI is ready to verify your delivery.
+            {pt.success}
           </p>
           {publicUrl && (
             <div className="mt-2 text-[10px]">
@@ -157,7 +161,7 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
           )}
           
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-zinc-300">Kaspi Receipt Screenshot</Label>
+            <Label className="text-xs font-semibold text-zinc-300">{pt.uploadLabel}</Label>
             <div className="flex items-center justify-center w-full">
               <label className="flex flex-col items-center justify-center w-full h-32 border border-dashed border-white/10 hover:border-primary/40 rounded-lg cursor-pointer bg-zinc-950/20 transition-all">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -174,7 +178,7 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
                   ) : (
                     <>
                       <Upload className="h-7 w-7 text-zinc-500 mb-2" />
-                      <p className="text-xs text-zinc-400 font-semibold">Click to select receipt</p>
+                      <p className="text-xs text-zinc-400 font-semibold">{pt.chooseFile}</p>
                       <p className="text-[9px] text-zinc-500 mt-1">PNG, JPG or JPEG (max. 5MB)</p>
                     </>
                   )}
@@ -197,15 +201,15 @@ export default function PaymentUploadForm({ orderId, onPaymentSubmitted }: Payme
           <Button
             onClick={handlePaymentConfirm}
             disabled={loading || !file}
-            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-10 shadow-[0_0_15px_rgba(255,87,34,0.15)] flex items-center justify-center gap-1.5"
+            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-10 shadow-[0_0_15px_rgba(6,182,212,0.15)] flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Uploading Receipt...
+                {pt.submitting}
               </>
             ) : (
-              'I paid (Я оплатил)'
+              pt.submitBtn
             )}
           </Button>
         </CardFooter>

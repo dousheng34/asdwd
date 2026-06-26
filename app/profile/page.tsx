@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   User, 
-  Coins, 
   PlusCircle, 
   Clock, 
   CheckCircle2, 
@@ -12,10 +11,7 @@ import {
   Star, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  DollarSign, 
-  ShieldCheck,
   Loader2,
-  Gamepad,
   LogIn
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,10 +20,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/i18n'
 
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
+  const { language, t } = useTranslation()
+  const pt = t('profile')
+  const ot = t('order')
   
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
@@ -211,9 +211,14 @@ export default function ProfilePage() {
 
       if (finalError) throw finalError
 
-      setConfirmSuccessMsg(`Success! Funds of $${amount.toFixed(2)} have been released from escrow to the seller.`)
+      setConfirmSuccessMsg(
+        language === 'kz'
+          ? `Сәтті! ${amount.toFixed(0)} ₸ қаражат эскроудан сатушының балансына аударылды.`
+          : language === 'en'
+          ? `Success! Funds of ${amount.toFixed(0)} ₸ have been released from escrow to the seller.`
+          : `Успешно! Средства в размере ${amount.toFixed(0)} ₸ разблокированы из эскроу и зачислены продавцу.`
+      )
       
-      // Reload profile dashboard data
       await loadProfileData()
     } catch (err: any) {
       console.error('Delivery confirmation error:', err)
@@ -223,16 +228,23 @@ export default function ProfilePage() {
     }
   }
 
+  const accessDeniedTitle = language === 'kz' ? 'Рұқсат берілмеді' : language === 'en' ? 'Access Denied' : 'Доступ запрещен'
+  const accessDeniedDesc = language === 'kz' ? 'Кабинетті көру немесе теңгерімді басқару үшін жүйеге кіріңіз.' : language === 'en' ? 'Please sign in to view your dashboard, check order status, or manage your balance.' : 'Пожалуйста, войдите в аккаунт, чтобы просмотреть кабинет или управлять балансом.'
+  const backToHome = language === 'kz' ? 'Басты бетке' : language === 'en' ? 'Back to Homepage' : 'Назад на главную'
+
+  const verifiedMerchantLabel = language === 'kz' ? 'Сенімді саудагер' : language === 'en' ? 'Verified Member' : 'Проверенный мерчант'
+  const registeredLabel = language === 'kz' ? 'Тіркелген күні' : language === 'en' ? 'Registered' : 'Регистрация'
+  const completedSalesLabel = language === 'kz' ? 'аяқталған мәмілелер' : language === 'en' ? 'completed sales' : 'завершенных продаж'
+
   if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <span className="text-zinc-500 text-xs">Checking user session...</span>
+        <span className="text-zinc-500 text-xs">{t('common').loading}</span>
       </div>
     )
   }
 
-  // Not logged in fallback screen
   if (!user) {
     return (
       <div className="container mx-auto max-w-md px-4 py-16">
@@ -241,24 +253,24 @@ export default function ProfilePage() {
             <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
               <User className="h-6 w-6" />
             </div>
-            <CardTitle className="text-lg font-bold text-white">Access Denied</CardTitle>
+            <CardTitle className="text-lg font-bold text-white">{accessDeniedTitle}</CardTitle>
             <CardDescription className="text-xs text-zinc-500">
-              Please sign in to view your dashboard, check order status, or manage your balance.
+              {accessDeniedDesc}
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex flex-col gap-3">
             <Button 
               onClick={() => router.push('/auth/login')}
-              className="w-full bg-primary hover:bg-primary/95 text-white font-semibold flex items-center justify-center gap-1.5 h-10 text-xs"
+              className="w-full bg-primary hover:bg-primary/95 text-white font-semibold flex items-center justify-center gap-1.5 h-10 text-xs cursor-pointer"
             >
-              <LogIn className="h-4 w-4" /> Sign In
+              <LogIn className="h-4 w-4" /> {t('navbar').signIn}
             </Button>
             <Button 
               variant="ghost" 
               onClick={() => router.push('/')}
-              className="w-full text-zinc-400 hover:text-white text-xs"
+              className="w-full text-zinc-400 hover:text-white text-xs cursor-pointer"
             >
-              Back to Homepage
+              {backToHome}
             </Button>
           </CardFooter>
         </Card>
@@ -272,8 +284,8 @@ export default function ProfilePage() {
       {/* 1. Header/Profile Block */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8 rounded-2xl bg-zinc-900/10 border border-white/5 relative overflow-hidden">
         <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xl font-bold uppercase shadow-[0_0_15px_rgba(255,87,34,0.15)]">
-            {profile?.username ? profile.username.substring(0, 2) : 'SL'}
+          <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xl font-bold uppercase shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+            {profile?.username ? profile.username.substring(0, 2) : 'AK'}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -281,17 +293,17 @@ export default function ProfilePage() {
                 {profile?.username || user.email?.split('@')[0]}
               </h1>
               <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-white/5 text-[9px] text-zinc-400 font-mono">
-                Verified Member
+                {verifiedMerchantLabel}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 mt-1">Registered: {new Date(profile?.created_at || user.created_at).toLocaleDateString()}</p>
+            <p className="text-xs text-zinc-400 mt-1">{registeredLabel}: {new Date(profile?.created_at || user.created_at).toLocaleDateString()}</p>
             <div className="flex items-center gap-2 mt-2">
               <div className="flex items-center gap-0.5 text-xs text-zinc-300">
                 <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                 <span className="font-semibold text-white">{profile?.rating?.toFixed(2) || '5.00'}</span>
               </div>
               <span className="text-zinc-600 text-[10px]">•</span>
-              <span className="text-xs text-zinc-500">{profile?.sales_count || 0} completed sales</span>
+              <span className="text-xs text-zinc-500">{profile?.sales_count || 0} {completedSalesLabel}</span>
             </div>
           </div>
         </div>
@@ -299,9 +311,9 @@ export default function ProfilePage() {
         {/* Balance & Quick Actions */}
         <div className="flex flex-col items-stretch md:items-end justify-center gap-4 bg-zinc-900/40 border border-white/5 p-4 rounded-xl shrink-0 w-full sm:w-[280px]">
           <div className="flex justify-between md:justify-end md:gap-4 items-center w-full">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Available Balance</span>
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">{pt.balanceLabel}</span>
             <div className="text-xl sm:text-2xl font-black text-primary font-mono mt-0.5">
-              ${parseFloat(profile?.balance || 0).toFixed(2)}
+              {parseFloat(profile?.balance || 0).toFixed(0)} ₸
             </div>
           </div>
           
@@ -310,46 +322,113 @@ export default function ProfilePage() {
               size="sm" 
               variant="outline" 
               onClick={() => setActiveAction(activeAction === 'deposit' ? null : 'deposit')}
-              className="flex-1 h-8 text-[10px] border-white/10 hover:border-white/20 text-zinc-300 gap-1"
+              className="flex-1 h-8 text-[10px] border-white/10 hover:border-white/20 text-zinc-300 gap-1 cursor-pointer"
             >
-              <ArrowDownLeft className="h-3 w-3 text-emerald-400" /> Deposit
+              <ArrowDownLeft className="h-3 w-3 text-emerald-400" /> {language === 'kz' ? 'Толықтыру' : language === 'en' ? 'Deposit' : 'Пополнить'}
             </Button>
             <Button 
               size="sm" 
               onClick={() => setActiveAction(activeAction === 'withdraw' ? null : 'withdraw')}
-              className="flex-1 h-8 text-[10px] bg-primary hover:bg-primary/95 text-white gap-1 shadow-[0_0_10px_rgba(255,87,34,0.15)]"
+              className="flex-1 h-8 text-[10px] bg-primary hover:bg-primary/95 text-white gap-1 shadow-[0_0_10px_rgba(6,182,212,0.15)] cursor-pointer"
             >
-              <ArrowUpRight className="h-3 w-3" /> Withdraw
+              <ArrowUpRight className="h-3 w-3" /> {pt.withdrawBtn}
             </Button>
           </div>
 
           {/* Action Input Panel (Deposit/Withdraw) */}
           {activeAction && (
-            <form onSubmit={handleBalanceSubmit} className="w-full border-t border-white/5 pt-3 mt-1 space-y-2">
-              {actionError && (
-                <div className="text-[9px] text-red-400 bg-red-500/5 p-1 rounded border border-red-500/10">
-                  {actionError}
+            <div className="w-full border-t border-white/5 pt-3 mt-1 space-y-3">
+              {activeAction === 'deposit' ? (
+                <div className="space-y-3 text-left">
+                  <div className="p-3 rounded-lg bg-zinc-950/40 border border-white/5 text-[10px] space-y-2 text-zinc-400">
+                    <p className="font-semibold text-white">
+                      {language === 'kz' ? 'Kaspi арқылы теңгерімді толтыру:' : 'Пополнение баланса через Kaspi:'}
+                    </p>
+                    <p>
+                      {language === 'kz' 
+                        ? '1. Реквизиттер бойынша аударым жасаңыз:' 
+                        : '1. Сделайте перевод по реквизитам:'}
+                      <br />
+                      <span className="font-mono text-primary font-bold">Kaspi Gold: +7 (707) 123-45-67</span> (Арсен О.)
+                    </p>
+                    <p>
+                      {language === 'kz' 
+                        ? '2. Чекті Telegram/WhatsApp-қа жіберіңіз: ' 
+                        : '2. Отправьте чек в Telegram/WhatsApp: '}
+                      <a href="https://wa.me/77071234567" target="_blank" rel="noreferrer" className="text-primary hover:underline font-bold">
+                        +7 (707) 123-45-67
+                      </a>
+                    </p>
+                    <p className="text-[9px] text-zinc-500 italic">
+                      {language === 'kz' 
+                        ? '*Баланс чек тексерілгеннен кейін 5-10 минут ішінде аударылады.' 
+                        : '*Баланс будет зачислен в течение 5-10 минут после проверки чека.'}
+                    </p>
+                  </div>
+                  
+                  {/* Demo automatic loader */}
+                  <form onSubmit={handleBalanceSubmit} className="space-y-2">
+                    <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">
+                      {language === 'kz' ? 'Тест үшін демо-толтыру:' : 'Демо-пополнение для тестирования:'}
+                    </p>
+                    {actionError && (
+                      <div className="text-[9px] text-red-400 bg-red-500/5 p-1 rounded border border-red-500/10">
+                        {actionError}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Сумма (₸)"
+                        value={actionAmount}
+                        onChange={(e) => setActionAmount(e.target.value)}
+                        required
+                        className="bg-zinc-950/40 border-white/5 h-8 text-[10px] text-zinc-200"
+                      />
+                      <Button 
+                        type="submit" 
+                        disabled={actionLoading}
+                        className="h-8 text-[9px] bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer px-3 shrink-0"
+                      >
+                        {actionLoading ? t('common').loading : language === 'kz' ? 'Толықтыру' : 'Зачислить'}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
+              ) : (
+                <form onSubmit={handleBalanceSubmit} className="space-y-2">
+                  <p className="text-[10px] text-zinc-400 font-semibold text-left">
+                    {language === 'kz' ? 'Қаражатты шығару:' : 'Вывод средств:'}
+                  </p>
+                  {actionError && (
+                    <div className="text-[9px] text-red-400 bg-red-500/5 p-1 rounded border border-red-500/10">
+                      {actionError}
+                    </div>
+                  )}
+                  <div className="p-3 rounded-lg bg-zinc-950/40 border border-white/5 text-[9px] text-zinc-400 text-left space-y-1">
+                    <p>{language === 'kz' ? 'Қаражатты Kaspi Gold картаңызға шығару сұранысын жасаңыз.' : 'Будет создан запрос на вывод средств на вашу карту Kaspi Gold.'}</p>
+                    <p className="text-zinc-500 italic">{language === 'kz' ? '*Шығару 1 сағатқа дейін созылады.' : '*Вывод обрабатывается гарантом до 1 часа.'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder={pt.withdrawAmountPlaceholder}
+                      value={actionAmount}
+                      onChange={(e) => setActionAmount(e.target.value)}
+                      required
+                      className="bg-zinc-950/40 border-white/5 h-8 text-[10px] text-zinc-200"
+                    />
+                    <Button 
+                      type="submit" 
+                      disabled={actionLoading}
+                      className="h-8 text-[9px] bg-primary hover:bg-primary/95 text-white cursor-pointer px-3 shrink-0"
+                    >
+                      {actionLoading ? t('common').loading : language === 'kz' ? 'Шығару' : 'Вывести'}
+                    </Button>
+                  </div>
+                </form>
               )}
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={activeAction === 'deposit' ? 'Deposit amount' : 'Withdraw amount'}
-                  value={actionAmount}
-                  onChange={(e) => setActionAmount(e.target.value)}
-                  required
-                  className="bg-zinc-950/40 border-white/5 h-8 text-[10px] text-zinc-200"
-                />
-                <Button 
-                  type="submit" 
-                  disabled={actionLoading}
-                  className="h-8 text-[9px] bg-zinc-800 hover:bg-primary text-white"
-                >
-                  {actionLoading ? 'Updating...' : 'Submit'}
-                </Button>
-              </div>
-            </form>
+            </div>
           )}
         </div>
       </div>
@@ -365,14 +444,14 @@ export default function ProfilePage() {
       {/* 2. Dashboard Tabs */}
       <Tabs defaultValue="listings" className="w-full space-y-6">
         <TabsList className="bg-zinc-900/40 border border-white/5 p-1 rounded-lg">
-          <TabsTrigger value="listings" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
-            My Offers ({activeListings.length})
+          <TabsTrigger value="listings" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white cursor-pointer">
+            {pt.activeOffersTab} ({activeListings.length})
           </TabsTrigger>
-          <TabsTrigger value="purchases" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
-            Purchases ({purchases.length})
+          <TabsTrigger value="purchases" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white cursor-pointer">
+            {pt.purchasesTab} ({purchases.length})
           </TabsTrigger>
-          <TabsTrigger value="sales" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
-            Sales & Escrow ({sales.length})
+          <TabsTrigger value="sales" className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-white cursor-pointer">
+            {pt.salesTab} ({sales.length})
           </TabsTrigger>
         </TabsList>
 
@@ -381,12 +460,16 @@ export default function ProfilePage() {
           <Card className="bg-zinc-900/10 border-white/5">
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/5">
               <div>
-                <CardTitle className="text-sm font-semibold text-white">Your Active Marketplace Offers</CardTitle>
-                <CardDescription className="text-[11px] text-zinc-500">Items and services you are currently selling.</CardDescription>
+                <CardTitle className="text-sm font-semibold text-white">
+                  {language === 'kz' ? 'Сіздің белсенді хабарландыруларыңыз' : language === 'en' ? 'Your Active Marketplace Offers' : 'Ваши активные объявления'}
+                </CardTitle>
+                <CardDescription className="text-[11px] text-zinc-500">
+                  {language === 'kz' ? 'Сіз қазір сатып жатқан тауарлар мен қызметтер.' : language === 'en' ? 'Items and services you are currently selling.' : 'Товары и услуги, которые вы сейчас продаете.'}
+                </CardDescription>
               </div>
               <Link href="/listings/create">
-                <Button size="sm" className="h-8 text-[10px] bg-zinc-800 hover:bg-primary text-white border border-white/5">
-                  <PlusCircle className="h-3.5 w-3.5 mr-1" /> Add New
+                <Button size="sm" className="h-8 text-[10px] bg-zinc-800 hover:bg-primary text-white border border-white/5 cursor-pointer">
+                  <PlusCircle className="h-3.5 w-3.5 mr-1" /> {language === 'kz' ? 'Қосу' : language === 'en' ? 'Add New' : 'Добавить'}
                 </Button>
               </Link>
             </CardHeader>
@@ -394,7 +477,7 @@ export default function ProfilePage() {
               {loading ? (
                 <div className="p-8 text-center text-zinc-500 text-xs">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                  Loading active listings...
+                  {t('common').loading}
                 </div>
               ) : activeListings.length > 0 ? (
                 <div className="divide-y divide-white/5">
@@ -404,11 +487,18 @@ export default function ProfilePage() {
                         <Link href={`/listings/${item.id}`} className="font-semibold text-zinc-200 hover:text-primary transition-colors">
                           {item.title}
                         </Link>
-                        <div className="text-[10px] text-zinc-500">{item.game?.name} • {item.category?.name}</div>
+                        <div className="text-[10px] text-zinc-500">
+                          {item.game?.name} • {
+                            item.category?.name === 'Items' ? language === 'kz' ? 'Заттар' : language === 'en' ? 'Items' : 'Предметы' :
+                            item.category?.name === 'Currency' ? 'Валюта' :
+                            item.category?.name === 'Accounts' ? language === 'kz' ? 'Аккаунты' : 'Accounts' :
+                            language === 'kz' ? 'Бустинг' : 'Boosting'
+                          }
+                        </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <div className="font-semibold text-primary font-mono">${parseFloat(item.price).toFixed(2)}</div>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400">
+                        <div className="font-semibold text-primary font-mono">{parseFloat(item.price).toFixed(0)} ₸</div>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 uppercase">
                           {item.status}
                         </span>
                       </div>
@@ -417,7 +507,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="p-8 text-center text-zinc-500 text-xs">
-                  No active listings found.
+                  {pt.noActiveOffers}
                 </div>
               )}
             </CardContent>
@@ -428,14 +518,18 @@ export default function ProfilePage() {
         <TabsContent value="purchases" className="space-y-4">
           <Card className="bg-zinc-900/10 border-white/5">
             <CardHeader className="pb-4 border-b border-white/5">
-              <CardTitle className="text-sm font-semibold text-white">Purchase History</CardTitle>
-              <CardDescription className="text-[11px] text-zinc-500">Monitor items you purchased and active escrow state.</CardDescription>
+              <CardTitle className="text-sm font-semibold text-white">
+                {language === 'kz' ? 'Сатып алу тарихы' : language === 'en' ? 'Purchase History' : 'История покупок'}
+              </CardTitle>
+              <CardDescription className="text-[11px] text-zinc-500">
+                {language === 'kz' ? 'Сатып алған тауарларыңыз бен эскроу күйін бақылаңыз.' : language === 'en' ? 'Monitor items you purchased and active escrow state.' : 'Отслеживайте ваши покупки и состояние эскроу.'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
                 <div className="p-8 text-center text-zinc-500 text-xs">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                  Loading purchase records...
+                  {t('common').loading}
                 </div>
               ) : purchases.length > 0 ? (
                 <div className="divide-y divide-white/5">
@@ -448,36 +542,36 @@ export default function ProfilePage() {
                         <div className="text-[10px] text-zinc-500 flex items-center gap-2">
                           <span>{purchase.listing?.game?.name}</span>
                           <span>•</span>
-                          <span>Seller: {purchase.seller?.username || 'gamer_store'}</span>
+                          <span>{language === 'kz' ? 'Сатушы' : language === 'en' ? 'Seller' : 'Продавец'}: {purchase.seller?.username || 'gamer_store'}</span>
                           <span>•</span>
                           <span>{new Date(purchase.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-6">
-                        <div className="font-semibold text-zinc-100 font-mono">${parseFloat(purchase.amount).toFixed(2)}</div>
+                        <div className="font-semibold text-zinc-100 font-mono">{parseFloat(purchase.amount).toFixed(0)} ₸</div>
                         
                         {/* Transaction Status Flow */}
                         {purchase.status === 'pending' && (
                           <span className="px-2 py-0.5 rounded-full bg-zinc-800 border border-white/5 text-[9px] text-zinc-400">
-                            Pending Payment
+                            {ot.statusPending}
                           </span>
                         )}
 
                         {purchase.status === 'escrow' && (
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[9px] text-amber-400 flex items-center gap-1">
-                              <Clock className="h-2.5 w-2.5 animate-pulse" /> In Escrow
+                              <Clock className="h-2.5 w-2.5 animate-pulse" /> {ot.statusEscrow}
                             </span>
                             <Button 
                               size="sm" 
                               onClick={() => handleConfirmDelivery(purchase.id, purchase.seller?.id, parseFloat(purchase.amount))}
                               disabled={confirmLoadingId === purchase.id}
-                              className="h-7 text-[9px] bg-primary hover:bg-primary/90 text-white font-semibold flex items-center gap-1"
+                              className="h-7 text-[9px] bg-primary hover:bg-primary/90 text-white font-semibold flex items-center gap-1 cursor-pointer"
                             >
                               {confirmLoadingId === purchase.id ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                'Confirm Delivery'
+                                ot.confirmReceiptBtn.includes('confirm') ? 'Confirm' : language === 'kz' ? 'Растау' : 'Подтвердить'
                               )}
                             </Button>
                           </div>
@@ -485,19 +579,19 @@ export default function ProfilePage() {
 
                         {purchase.status === 'disputed' && (
                           <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] text-red-400 flex items-center gap-1">
-                            <AlertCircle className="h-2.5 w-2.5" /> Disputed
+                            <AlertCircle className="h-2.5 w-2.5" /> {ot.statusDisputed}
                           </span>
                         )}
 
                         {purchase.status === 'completed' && (
                           <span className="px-2 py-0.5 rounded-full bg-zinc-800 border border-white/5 text-[9px] text-zinc-400 flex items-center gap-1">
-                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" /> Completed
+                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" /> {ot.statusCompleted}
                           </span>
                         )}
 
                         {purchase.status === 'canceled' && (
                           <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] text-red-500">
-                            Canceled / Refunded
+                            {ot.statusCanceled}
                           </span>
                         )}
 
@@ -507,7 +601,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="p-8 text-center text-zinc-500 text-xs">
-                  No purchases found.
+                  {pt.noPurchases}
                 </div>
               )}
             </CardContent>
@@ -518,14 +612,18 @@ export default function ProfilePage() {
         <TabsContent value="sales" className="space-y-4">
           <Card className="bg-zinc-900/10 border-white/5">
             <CardHeader className="pb-4 border-b border-white/5">
-              <CardTitle className="text-sm font-semibold text-white">Incoming Sales & Escrows</CardTitle>
-              <CardDescription className="text-[11px] text-zinc-500">Deliver items to buyers to release funds from escrow.</CardDescription>
+              <CardTitle className="text-sm font-semibold text-white">
+                {language === 'kz' ? 'Кіріс сатылымдар және эскроу' : language === 'en' ? 'Incoming Sales & Escrows' : 'Входящие продажи и эскроу'}
+              </CardTitle>
+              <CardDescription className="text-[11px] text-zinc-500">
+                {language === 'kz' ? 'Эскроудан қаражатты алу үшін сатып алушыға тауарды жеткізіңіз.' : language === 'en' ? 'Deliver items to buyers to release funds from escrow.' : 'Передайте товар покупателю для разблокировки средств эскроу.'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
                 <div className="p-8 text-center text-zinc-500 text-xs">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                  Loading sales records...
+                  {t('common').loading}
                 </div>
               ) : sales.length > 0 ? (
                 <div className="divide-y divide-white/5">
@@ -538,41 +636,41 @@ export default function ProfilePage() {
                         <div className="text-[10px] text-zinc-500 flex items-center gap-2">
                           <span>{sale.listing?.game?.name}</span>
                           <span>•</span>
-                          <span>Buyer: {sale.buyer?.username || 'gamer_store'}</span>
+                          <span>{language === 'kz' ? 'Сатып алушы' : language === 'en' ? 'Buyer' : 'Покупатель'}: {sale.buyer?.username || 'gamer_store'}</span>
                           <span>•</span>
                           <span>{new Date(sale.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-6">
-                        <div className="font-semibold text-primary font-mono">${parseFloat(sale.amount).toFixed(2)}</div>
+                        <div className="font-semibold text-primary font-mono">{parseFloat(sale.amount).toFixed(0)} ₸</div>
                         
                         {sale.status === 'pending' && (
                           <span className="px-2 py-0.5 rounded-full bg-zinc-800 border border-white/5 text-[9px] text-zinc-400">
-                            Waiting for Payment Receipt
+                            {language === 'kz' ? 'Төлемді күту' : language === 'en' ? 'Waiting for Payment' : 'Ожидание оплаты'}
                           </span>
                         )}
 
                         {sale.status === 'escrow' && (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[9px] text-amber-400 flex items-center gap-1">
-                            <AlertCircle className="h-2.5 w-2.5 animate-pulse" /> Escrow Locked: Deliver Item
+                            <AlertCircle className="h-2.5 w-2.5 animate-pulse" /> {language === 'kz' ? 'Эскроу бұғатталды: Тауарды тапсырыңыз' : language === 'en' ? 'Escrow Locked: Deliver Item' : 'Эскроу залочен: передайте товар'}
                           </span>
                         )}
 
                         {sale.status === 'disputed' && (
                           <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] text-red-400 flex items-center gap-1">
-                            <AlertCircle className="h-2.5 w-2.5" /> Disputed
+                            <AlertCircle className="h-2.5 w-2.5" /> {ot.statusDisputed}
                           </span>
                         )}
 
                         {sale.status === 'completed' && (
                           <span className="px-2 py-0.5 rounded-full bg-zinc-800 border border-white/5 text-[9px] text-zinc-400 flex items-center gap-1">
-                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" /> Escrow Released (Paid)
+                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" /> {language === 'kz' ? 'Эскроу босатылды (Төленді)' : language === 'en' ? 'Escrow Released' : 'Эскроу разблокирован (Выплачено)'}
                           </span>
                         )}
 
                         {sale.status === 'canceled' && (
                           <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] text-red-500">
-                            Canceled / Refunded
+                            {ot.statusCanceled}
                           </span>
                         )}
 
@@ -582,14 +680,14 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="p-8 text-center text-zinc-500 text-xs">
-                  No active incoming sales waiting for delivery.
+                  {pt.noSales}
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
+ 
     </div>
   )
 }

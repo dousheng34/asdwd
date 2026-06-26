@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { AlertTriangle, Loader2, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/lib/i18n'
 
 interface DisputeFormProps {
   orderId: string;
@@ -15,6 +15,9 @@ interface DisputeFormProps {
 
 export default function DisputeForm({ orderId, onDisputeInitiated }: DisputeFormProps) {
   const supabase = createClient()
+  const { t } = useTranslation()
+  const dt = t('dispute')
+
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -147,10 +150,10 @@ export default function DisputeForm({ orderId, onDisputeInitiated }: DisputeForm
       <CardHeader className="p-5 border-b border-white/5 bg-red-950/10">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-primary animate-pulse" />
-          Open Arbitration Dispute
+          {dt.title}
         </CardTitle>
         <CardDescription className="text-[11px] text-zinc-500">
-          This will lock transaction funds and submit the chat logs to Lindy AI for review.
+          {dt.desc}
         </CardDescription>
       </CardHeader>
       
@@ -159,9 +162,9 @@ export default function DisputeForm({ orderId, onDisputeInitiated }: DisputeForm
           <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
             <Scale className="h-5 w-5 text-primary" />
           </div>
-          <h3 className="text-xs font-semibold text-zinc-200">Dispute Opened Successfully</h3>
+          <h3 className="text-xs font-semibold text-zinc-200">{t('common').success}</h3>
           <p className="text-[11px] text-zinc-400 leading-relaxed max-w-xs mx-auto">
-            The dispute has been initialized. Lindy AI is reviewing the chat logs to resolve this transaction.
+            {dt.success}
           </p>
         </CardContent>
       ) : (
@@ -173,10 +176,10 @@ export default function DisputeForm({ orderId, onDisputeInitiated }: DisputeForm
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="reason" className="text-xs font-semibold text-zinc-300">Reason for Dispute</Label>
+              <Label htmlFor="reason" className="text-xs font-semibold text-zinc-300">{dt.reasonLabel}</Label>
               <textarea
                 id="reason"
-                placeholder="Describe why you are opening the dispute (e.g. Seller did not deliver items, wrong product specs)..."
+                placeholder={dt.reasonPlaceholder}
                 rows={3}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -189,17 +192,17 @@ export default function DisputeForm({ orderId, onDisputeInitiated }: DisputeForm
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-9 px-4 shadow-[0_0_15px_rgba(255,87,34,0.15)] transition-all flex items-center gap-1.5"
+              className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-9 px-4 shadow-[0_0_15px_rgba(6,182,212,0.15)] transition-all flex items-center gap-1.5 cursor-pointer"
             >
               {loading ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Analyzing Chat...
+                  {dt.submitting}
                 </>
               ) : (
                 <>
                   <Scale className="h-3.5 w-3.5" />
-                  Submit to Arbitration
+                  {dt.submitBtn}
                 </>
               )}
             </Button>

@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { ThumbsUp, ThumbsDown, Loader2, Star, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/lib/i18n'
 
 interface ReviewFormProps {
   transactionId: string;
@@ -17,6 +17,9 @@ interface ReviewFormProps {
 
 export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewSubmitted }: ReviewFormProps) {
   const supabase = createClient()
+  const { t } = useTranslation()
+  const rt = t('reviews')
+
   const [rating, setRating] = useState<number | null>(null) // 5 = positive, 1 = negative
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
@@ -65,7 +68,7 @@ export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewS
       }
 
       // 4. Send a system notification in the transaction chat
-      const ratingText = rating === 5 ? '👍 Positive (Рекомендую)' : '👎 Negative (Не рекомендую)'
+      const ratingText = rating === 5 ? '👍 Positive / Оң / Положительный' : '👎 Negative / Теріс / Отрицательный'
       const commentString = comment.trim() ? ` - "${comment.trim()}"` : ''
       await supabase.from('messages').insert({
         transaction_id: transactionId,
@@ -92,9 +95,9 @@ export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewS
         <div className="h-9 w-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
           <CheckCircle className="h-5 w-5 text-emerald-400" />
         </div>
-        <h3 className="text-xs font-semibold text-zinc-200">Thank You for Your Feedback!</h3>
+        <h3 className="text-xs font-semibold text-zinc-200">{rt.reviewSuccess}</h3>
         <p className="text-[10px] text-zinc-500 leading-relaxed max-w-xs mx-auto">
-          Your review has been submitted and the seller's rating has been updated.
+          Feedback saved and seller rating updated.
         </p>
       </Card>
     )
@@ -104,10 +107,10 @@ export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewS
     <Card className="bg-zinc-900/40 border-white/5 shadow-lg overflow-hidden">
       <CardHeader className="p-5 border-b border-white/5 bg-zinc-900/30">
         <CardTitle className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-          <Star className="h-4 w-4 text-primary" /> Leave a Review
+          <Star className="h-4 w-4 text-primary" /> {rt.writeReviewTitle}
         </CardTitle>
         <CardDescription className="text-[10px] text-zinc-500">
-          Share your experience to help other gamers in the marketplace.
+          {rt.writeReviewDesc}
         </CardDescription>
       </CardHeader>
 
@@ -121,39 +124,39 @@ export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewS
 
           {/* Rating Choice (Thumbs Up/Down like Playerok) */}
           <div className="space-y-2">
-            <Label className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Recommendation</Label>
+            <Label className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">{rt.ratingLabel}</Label>
             <div className="flex gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setRating(5)}
-                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   rating === 5
                     ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.08)]'
                     : 'bg-zinc-950/20 border-white/5 text-zinc-400 hover:text-white hover:border-white/10'
                 }`}
               >
-                <ThumbsUp className="h-4 w-4" /> Good (Хорошо)
+                <ThumbsUp className="h-4 w-4" /> {rt.ratingPositive}
               </button>
               <button
                 type="button"
                 onClick={() => setRating(1)}
-                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   rating === 1
                     ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.08)]'
                     : 'bg-zinc-950/20 border-white/5 text-zinc-400 hover:text-white hover:border-white/10'
                 }`}
               >
-                <ThumbsDown className="h-4 w-4" /> Bad (Плохо)
+                <ThumbsDown className="h-4 w-4" /> {rt.ratingNegative}
               </button>
             </div>
           </div>
 
           {/* Comment */}
           <div className="space-y-2">
-            <Label htmlFor="comment" className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Comment (Optional)</Label>
+            <Label htmlFor="comment" className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">{rt.commentLabel}</Label>
             <textarea
               id="comment"
-              placeholder="What went well? Or what could the seller improve?"
+              placeholder={rt.commentPlaceholder}
               rows={2}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -166,15 +169,15 @@ export default function ReviewForm({ transactionId, sellerId, buyerId, onReviewS
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs h-9 flex items-center justify-center gap-1.5"
+            className="w-full bg-primary hover:bg-primary/95 text-white font-semibold text-xs h-9 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Submitting...
+                {rt.submitting}
               </>
             ) : (
-              'Submit Review'
+              rt.submitBtn
             )}
           </Button>
         </CardFooter>

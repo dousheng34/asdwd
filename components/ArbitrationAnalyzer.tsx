@@ -188,7 +188,7 @@ export default function ArbitrationAnalyzer({ orderId, initialVerdict }: Arbitra
           <Button
             onClick={() => handleExecuteResolution('release')}
             disabled={executingAction}
-            className="w-full sm:w-1/2 bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-9 shadow-[0_0_15px_rgba(255,87,34,0.15)]"
+            className="w-full sm:w-1/2 bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-9 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
           >
             Execute Release
           </Button>

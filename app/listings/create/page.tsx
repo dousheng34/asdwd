@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/utils/supabase/client'
+import { useTranslation } from '@/lib/i18n'
 
 export default function CreateListingPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { language, t } = useTranslation()
+  const cl = t('createListing')
   
   const [games, setGames] = useState<{ id: string, name: string }[]>([])
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
@@ -22,8 +25,8 @@ export default function CreateListingPage() {
   const [stock, setStock] = useState('1')
   const [game, setGame] = useState('')
   const [category, setCategory] = useState('')
-  const [delivery, setDelivery] = useState('Instant') // Saved in description or UI-only if not in schema
-  const [autoDeliveryData, setAutoDeliveryData] = useState('') // Optional auto-delivery credentials
+  const [delivery, setDelivery] = useState('Instant')
+  const [autoDeliveryData, setAutoDeliveryData] = useState('')
   
   const [loading, setLoading] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
@@ -55,7 +58,7 @@ export default function CreateListingPage() {
           .from('categories')
           .select('id, name')
 
-        // Auto-seed games if database tables are empty (first run fallback)
+        // Auto-seed games if database tables are empty
         if ((!gamesData || gamesData.length === 0) && !gamesError) {
           const defaultGames = [
             { name: 'Counter-Strike 2', slug: 'cs2' },
@@ -120,7 +123,6 @@ export default function CreateListingPage() {
         throw new Error('Please select both a game and a category.')
       }
 
-      // Format description to include delivery details if they differ from description
       const finalDescription = `[Delivery: ${delivery}] ${description}`
 
       // 1. Insert active listing
@@ -151,7 +153,6 @@ export default function CreateListingPage() {
         
         if (secretError) {
           console.error('Failed to save listing secret:', secretError)
-          // We don't block the listing creation, but alert user or delete listing (blocking is safer for sellers)
           throw new Error(`Listing created, but failed to save secure auto-delivery credentials: ${secretError.message}`)
         }
       }
@@ -165,16 +166,22 @@ export default function CreateListingPage() {
     }
   }
 
+  const deliveryTimeLabel = language === 'kz' ? 'Жеткізу уақыты' : language === 'en' ? 'Delivery Time' : 'Время доставки'
+  const deliveryTimePlaceholder = language === 'kz' ? 'Мыс: Лездік, 15 минут, 1 сағат' : language === 'en' ? 'e.g. Instant, 15 Mins, 1 Hour' : 'Например: Моментально, 15 минут, 1 час'
+
+  const authRequiredTitle = language === 'kz' ? 'Аутентификация қажет' : language === 'en' ? 'Authentication Required' : 'Требуется авторизация'
+  const authRequiredDesc = language === 'kz' ? 'Сатуға хабарландыру жариялау үшін жүйеге кіруіңіз керек.' : language === 'en' ? 'You must be signed in to list game currency, accounts, or items for sale.' : 'Вы должны войти в аккаунт, чтобы выставить товар на продажу.'
+  const signInSellerBtn = language === 'kz' ? 'Сатушы аккаунтына кіру' : language === 'en' ? 'Sign In to Seller Account' : 'Войти в аккаунт продавца'
+
   if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <span className="text-zinc-500 text-xs">Checking authorization...</span>
+        <span className="text-zinc-500 text-xs">{t('common').loading}</span>
       </div>
     )
   }
 
-  // Not logged in fallback screen
   if (!user) {
     return (
       <div className="container mx-auto max-w-md px-4 py-16">
@@ -183,24 +190,24 @@ export default function CreateListingPage() {
             <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
               <ShieldAlert className="h-6 w-6" />
             </div>
-            <CardTitle className="text-lg font-bold text-white">Authentication Required</CardTitle>
+            <CardTitle className="text-lg font-bold text-white">{authRequiredTitle}</CardTitle>
             <CardDescription className="text-xs text-zinc-500">
-              You must be signed in to list game currency, accounts, or items for sale.
+              {authRequiredDesc}
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex flex-col gap-3">
             <Button 
               onClick={() => router.push('/auth/login')}
-              className="w-full bg-primary hover:bg-primary/95 text-white font-semibold flex items-center justify-center gap-1.5 h-10 text-xs"
+              className="w-full bg-primary hover:bg-primary/95 text-white font-semibold flex items-center justify-center gap-1.5 h-10 text-xs cursor-pointer"
             >
-              <LogIn className="h-4 w-4" /> Sign In to Seller Account
+              <LogIn className="h-4 w-4" /> {signInSellerBtn}
             </Button>
             <Button 
               variant="ghost" 
               onClick={() => router.push('/')}
-              className="w-full text-zinc-400 hover:text-white text-xs"
+              className="w-full text-zinc-400 hover:text-white text-xs cursor-pointer"
             >
-              Back to Home
+              {language === 'kz' ? 'Басты бетке қайту' : language === 'en' ? 'Back to Home' : 'Назад на главную'}
             </Button>
           </CardFooter>
         </Card>
@@ -211,15 +218,15 @@ export default function CreateListingPage() {
   return (
     <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
-      <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back
+      <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition cursor-pointer">
+        <ArrowLeft className="h-3.5 w-3.5" /> {language === 'kz' ? 'Артқа' : language === 'en' ? 'Back' : 'Назад'}
       </button>
 
       <Card className="bg-zinc-900/20 border-white/5 shadow-xl">
         <CardHeader className="border-b border-white/5 pb-6">
-          <CardTitle className="text-xl font-bold text-white">List Your Gaming Value</CardTitle>
+          <CardTitle className="text-xl font-bold text-white">{cl.title}</CardTitle>
           <CardDescription className="text-xs text-zinc-500">
-            Publish an offer to sell in-game currency, items, skins, or accounts.
+            {cl.desc}
           </CardDescription>
         </CardHeader>
         
@@ -235,7 +242,7 @@ export default function CreateListingPage() {
             {/* Game & Category Selection */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="game" className="text-xs font-semibold text-zinc-300">Select Game</Label>
+                <Label htmlFor="game" className="text-xs font-semibold text-zinc-300">{cl.gameLabel}</Label>
                 <select
                   id="game"
                   value={game}
@@ -252,7 +259,7 @@ export default function CreateListingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-xs font-semibold text-zinc-300">Category</Label>
+                <Label htmlFor="category" className="text-xs font-semibold text-zinc-300">{cl.categoryLabel}</Label>
                 <select
                   id="category"
                   value={category}
@@ -260,21 +267,28 @@ export default function CreateListingPage() {
                   className="w-full bg-zinc-950/40 text-zinc-300 border border-white/5 px-3 py-2.5 rounded-md text-xs focus:border-primary/50 focus:outline-none"
                   required
                 >
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-zinc-900 text-zinc-300">
-                      {cat.name}
-                    </option>
-                  ))}
+                  {categories.map((cat) => {
+                    const localizedCatName = 
+                      cat.name === 'Items' ? language === 'kz' ? 'Заттар' : language === 'en' ? 'Items' : 'Предметы' :
+                      cat.name === 'Currency' ? 'Валюта' :
+                      cat.name === 'Accounts' ? 'Аккаунты' :
+                      cat.name === 'Boosting' ? 'Бустинг' : cat.name;
+                    return (
+                      <option key={cat.id} value={cat.id} className="bg-zinc-900 text-zinc-300">
+                        {localizedCatName}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
             </div>
 
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-xs font-semibold text-zinc-300">Listing Title</Label>
+              <Label htmlFor="title" className="text-xs font-semibold text-zinc-300">{cl.titleLabel}</Label>
               <Input
                 id="title"
-                placeholder="e.g. 50,000 Gold Alliance firemaw"
+                placeholder={cl.titlePlaceholder}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -284,10 +298,10 @@ export default function CreateListingPage() {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="desc" className="text-xs font-semibold text-zinc-300">Description</Label>
+              <Label htmlFor="desc" className="text-xs font-semibold text-zinc-300">{cl.descriptionLabel}</Label>
               <textarea
                 id="desc"
-                placeholder="Specify delivery details, stock availability, character specifications..."
+                placeholder={cl.descriptionPlaceholder}
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -299,12 +313,12 @@ export default function CreateListingPage() {
             {/* Price & Stock & Delivery */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price" className="text-xs font-semibold text-zinc-300">Price (USD)</Label>
+                <Label htmlFor="price" className="text-xs font-semibold text-zinc-300">{cl.priceLabel}</Label>
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
-                  placeholder="0.00"
+                  step="1"
+                  placeholder="0"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   required
@@ -313,7 +327,7 @@ export default function CreateListingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stock" className="text-xs font-semibold text-zinc-300">Quantity / Stock</Label>
+                <Label htmlFor="stock" className="text-xs font-semibold text-zinc-300">{cl.stockLabel}</Label>
                 <Input
                   id="stock"
                   type="number"
@@ -326,10 +340,10 @@ export default function CreateListingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="delivery" className="text-xs font-semibold text-zinc-300">Delivery Time</Label>
+                <Label htmlFor="delivery" className="text-xs font-semibold text-zinc-300">{deliveryTimeLabel}</Label>
                 <Input
                   id="delivery"
-                  placeholder="e.g. Instant, 15 Mins, 1 Hour"
+                  placeholder={deliveryTimePlaceholder}
                   value={delivery}
                   onChange={(e) => setDelivery(e.target.value)}
                   required
@@ -341,26 +355,32 @@ export default function CreateListingPage() {
             {/* Auto-Delivery Data Panel (Playerok key feature) */}
             <div className="space-y-2 border-t border-white/5 pt-6">
               <Label htmlFor="secret" className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                <Key className="h-4 w-4 text-primary" /> Auto-Delivery Credentials (Optional)
+                <Key className="h-4 w-4 text-primary" /> {cl.autoDeliveryLabel}
               </Label>
               <textarea
                 id="secret"
-                placeholder="Enter digital keys, steam codes, or account credentials (e.g. login:password) here.
-This is stored securely and ONLY shown to the buyer immediately AFTER payment."
+                placeholder={cl.autoDeliveryPlaceholder}
                 rows={2}
                 value={autoDeliveryData}
                 onChange={(e) => setAutoDeliveryData(e.target.value)}
                 className="w-full bg-zinc-950/40 text-zinc-200 placeholder-zinc-500 border border-white/5 rounded-md p-3 text-xs focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
               <span className="text-[10px] text-zinc-500 block leading-normal">
-                If filled, the trade is completed instantly. The system will deliver these credentials to the buyer as soon as their payment receipt is submitted.
+                {cl.autoDeliveryDesc}
               </span>
             </div>
 
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 flex items-start gap-3 text-xs text-zinc-400">
               <ShieldAlert className="h-4.5 w-4.5 text-primary shrink-0 mt-0.5" />
               <div className="leading-normal">
-                <span className="font-semibold text-zinc-200">Delivery verification:</span> You must be ready to provide proof of delivery (screenshots, trade logs) in case the buyer raises a dispute. SolarLoot protects honest sellers.
+                <span className="font-semibold text-zinc-200">
+                  {language === 'kz' ? 'Жеткізуді растау:' : language === 'en' ? 'Delivery verification:' : 'Подтверждение доставки:'}
+                </span>{' '}
+                {language === 'kz' 
+                  ? 'Сатып алушы дау ашқан жағдайда жеткізуді растайтын дәлелдемелерді (скриншоттар, сауда журналдары) ұсынуға дайын болуыңыз керек. Asyk.kz адал сатушыларды қорғайды.' 
+                  : language === 'en' 
+                  ? 'You must be ready to provide proof of delivery (screenshots, trade logs) in case the buyer raises a dispute. Asyk.kz protects honest sellers.' 
+                  : 'Вы должны быть готовы предоставить доказательства доставки (скриншоты, скриншоты обмена) в случае возникновения спора. Asyk.kz защищает честных продавцов.'}
               </div>
             </div>
 
@@ -370,23 +390,16 @@ This is stored securely and ONLY shown to the buyer immediately AFTER payment."
               type="button"
               variant="ghost"
               onClick={() => router.back()}
-              className="text-xs text-zinc-400 hover:text-white"
+              className="text-xs text-zinc-400 hover:text-white cursor-pointer"
             >
-              Cancel
+              {t('common').cancel}
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_0_15px_rgba(255,87,34,0.2)] text-xs h-10 px-6"
+              className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_0_15px_rgba(6,182,212,0.2)] text-xs h-10 px-6 cursor-pointer"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                  Publishing...
-                </>
-              ) : (
-                'Publish Offer'
-              )}
+              {loading ? cl.submitting : cl.submitBtn}
             </Button>
           </CardFooter>
         </form>
